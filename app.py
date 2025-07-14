@@ -48,3 +48,31 @@ def artistas():
     return jsonify(res)
 
 
+resultados_por_pag = 10
+@app.route("/api/genero")
+def genero():
+    args = request.args
+    pagina = int(args.get('page', '1'))
+    descartar = (pagina-1) * resultados_por_pag
+    db = abrirConexion()
+    cursor = db.cursor()
+    cursor.execute("SELECT COUNT(*) AS cant FROM genres;")
+    cant = cursor.fetchone()['cant']
+    paginas = ceil(cant / resultados_por_pag)
+    if pagina < 1 or pagina > paginas:
+     return f"pagina no existe: {pagina}",400
+    cursor.execute(""" SELECT GenreId, Name 
+                        FROM genres LIMIT ? OFFSET ?; """, 
+                        (resultados_por_pag,descartar))
+    lista = cursor.fetchall()
+    cerrarConexion()
+    siguiente = None
+    anterior = None
+    if pagina > 1:
+       anterior = url_for('genero', page=pagina-1)
+    if pagina < paginas:
+       siguiente = url_for('genero', page=pagina+1)
+    info = { 'count' : cant, 'pages': paginas,
+             'next' : siguiente, 'prev' : anterior }
+    res = { 'info' : info, 'results' : lista}
+    return jsonify(res)
